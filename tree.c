@@ -4,14 +4,22 @@
 #include <assert.h>
 #include <stdbool.h>
 
+
+int numfree = 0;
+int nummalloc = 0;
+#define free(ptr) numfree++; free(ptr);
+#define malloc(size)  malloc(size);nummalloc++;
+#define calloc(count,size) calloc(count,size);nummalloc++;
+
+
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //tree.h
 
 typedef struct treenode{
-    char* data;
     struct treenode ** childs;
     int childs_count;
     int childs_maxsize;
+    char* data;
 }treenode;
 
 typedef void (*treenode_func)(treenode*);
@@ -20,7 +28,7 @@ typedef bool (*treenode_cmp)(treenode*,void*);
 treenode* _treenode_createnode(void* value,int datasize);
 treenode* _treenode_insertnode(treenode* root,void* value,int datasize);
 void treenode_print(treenode * root,treenode_func printfunc);
-void treenode_remove(treenode* parent,int childindex);
+void treenode_remove(treenode** parent,int childindex);
 treenode* treenode_search(treenode* root,void* value,treenode_cmp func);
 
 #define ca(value) (typeof(value)){value} //cast as variable
@@ -67,14 +75,17 @@ treenode* _treenode_insertnode(treenode* root,void* value,int datasize)
 
 typedef void (*treenode_func)(treenode*);
 
-void treenode_freechild(treenode* child)
+void treenode_freechild(treenode** child)
 {
-    for (int i = 0; i < child->childs_count; i++)
+    treenode* tree = *child;
+    for (int i = 0; i < tree->childs_count; i++)
     {
-        treenode_freechild(child->childs[i]);
-        free(child->childs[i]);
+        treenode_freechild(&tree->childs[i]);
     }
-    free(child->childs);
+    free(tree->childs);
+    free(tree->data);
+    free(tree);
+    //printf("free %p %p %p\n",tree,tree->data,tree->childs);
 }
 
 
@@ -111,15 +122,17 @@ void treenode_print(treenode * root,treenode_func printfunc)
     printf("\n");
 }
 
-void treenode_remove(treenode* parent,int childindex)
+void treenode_remove(treenode** parent,int childindex)
 {
+    treenode* temp = *parent;
     //if is outside of array throw error
-    assert(childindex < parent->childs_count);
-    treenode_freechild(parent->childs[childindex]);
-    for (int i = childindex; i < parent->childs_count-1; i++){
-        parent->childs[i] = parent->childs[i+1];
+    assert(childindex < temp->childs_count);
+    treenode* child = temp->childs[childindex];
+    for (int i = childindex; i < temp->childs_count-1; i++){
+        temp->childs[i] = temp->childs[i+1];
     }
-    parent->childs_count--;
+    treenode_freechild(&child);
+    temp->childs_count--;
 }
 
 treenode* treenode_search(treenode* root,void* value,treenode_cmp func)
@@ -135,31 +148,40 @@ treenode* treenode_search(treenode* root,void* value,treenode_cmp func)
     return NULL;
 }
 
+void treenode_free(treenode** root){
+
+    treenode* tree = *root;
+    while (tree->childs_count != 0){
+        treenode_remove(root,0);
+    }
+    
+
+    free(tree->childs);
+    free(tree->data);
+    free(tree);
+    root = NULL;
+}
 
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-void printNumber(treenode* a){printf("%d",*(int*)a->data);}
+void printNumber(treenode* a){printf("%d %p",*(int*)a->data,a);}
 
 typedef struct Employer{
     char name[64];
     char role[32];
 }Employer;
 
-void printEmployer(treenode* a)
+void _printEmployer(treenode* a)
 {
     Employer* e = (Employer*)(a->data);
-    printf("%s (%s)",e->name,e->role);
+    printf("%s (%s) %p (e)%p",e->name,e->role,a,e);
 }
 
 bool employercmp(treenode* root,void* value){
     Employer* e = (Employer*)root->data;
     return strcmp(e->name,(char*)value) == 0;
 }
-
-//quicksort
-
-
 
 
 int main()
@@ -173,9 +195,10 @@ int main()
     treenode_insertnode(child1,ca(10));
     treenode_insertnode(child2,ca(30));
 
-    treenode_remove(root,2);
     treenode_print(root,printNumber);
-    
+    treenode_remove(&root,2);
+
+    treenode_free(&root);
     puts("---------------------------");
 
     treenode* founder = treenode_createnode(((Employer){.name = "Maria", .role = "Founder"}));
@@ -192,15 +215,19 @@ int main()
     treenode_insertnode(director3,((Employer){.name = "Francisco", .role = "Employer"}));
     treenode_insertnode(director3,((Employer){.name = "Vasco", .role = "Employer"}));
 
-    treenode_print(founder,printEmployer);
+    treenode_print(founder,_printEmployer);
     
     puts("---------------------------");
     #define PERSON_NAME "Manuel"
     if(treenode_search(founder,PERSON_NAME,employercmp) != NULL){
-        printf("%s found",PERSON_NAME);
+        printf("%s found\n",PERSON_NAME);
     }else{
-        printf("%s not found",PERSON_NAME);
+        printf("%s not found\n",PERSON_NAME);
     }
 
+    treenode_free(&founder);
+    printf("malloc:%d | free:%d\n",nummalloc,numfree);
+
+    system("pause");
     return EXIT_SUCCESS;
 }

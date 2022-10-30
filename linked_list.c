@@ -3,8 +3,16 @@
 #include <stdlib.h>
 #include <string.h>
 
-//LinkedList.h
 
+
+int numfree = 0;
+int nummalloc = 0;
+#define free(ptr) free(ptr);numfree++;
+#define malloc(size)  malloc(size);nummalloc++;
+#define calloc(count,size) calloc(count,size);nummalloc++;
+   
+
+//LinkedList.h
 typedef struct LinkedNode
 {
     char* data;
@@ -18,6 +26,7 @@ LinkedNode* _linkedlist_createNode(void* value,int sizeValue);
 void _linkedlist_insert(LinkedNode** head,void* value,int sizeValue);
 void linkedlist_remove(LinkedNode** head,int index);
 void linked_list_loop(LinkedNode* head,linkedlist_func func);
+void linked_list_free(LinkedNode** head);
 void linkedlist_sort(LinkedNode** top,linkedlist_sortcmp sortcmp);
 
 #define ca(value) (typeof(value)){value} //cast as variable
@@ -46,7 +55,12 @@ void _linkedlist_insert(LinkedNode** head,void* value,int sizeValue)
 void linkedlist_remove(LinkedNode** head,int index)
 {
     LinkedNode* temp = *head;
-    if(index == 0){*head = temp->next;return;}
+    if(index == 0){
+        *head = temp->next;
+        free(temp->data);
+        free(temp);
+        return;
+    }
     LinkedNode* prev = NULL;
     for(int i = 0; i < index;i++)
     {
@@ -116,9 +130,6 @@ void linkedlist_sort(LinkedNode** top,linkedlist_sortcmp sortcmp_)
 
 }
 
-
-
-
 void linkedlist_loop(LinkedNode* head,linkedlist_func func)
 {
     LinkedNode* n = head; 
@@ -127,6 +138,20 @@ void linkedlist_loop(LinkedNode* head,linkedlist_func func)
         n = n->next;
     } while (n != NULL);
 }
+
+
+void linkedlist_free(LinkedNode* head)
+{
+    LinkedNode* tmp;
+    while (head != NULL)
+    {
+       tmp = head;
+       head = head->next;
+       free(tmp->data);
+       free(tmp);
+    }
+}
+
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //LinkedList vs List
@@ -154,6 +179,9 @@ bool linkedfloatSortcmp(void* a,void* b){
 bool linkedPersonSortcmp(void* a,void* b){
     return (*(Person*)a).age <= (*(Person*)b).age;
 }
+
+
+
 int main()
 {
     LinkedNode* listNum = linkedlist_createnode(ca(10.5f));
@@ -168,6 +196,8 @@ int main()
     printf("\nSorted:\n");
     linkedlist_loop(listNum,linkedListFloat);printf("NULL\n\n");
 
+    linkedlist_free(listNum);
+    
 
     LinkedNode* persons = linkedlist_createnode( ((Person){"Joao",15}));
     linkedlist_insert(persons,((Person){"Joao",19}));
@@ -176,64 +206,13 @@ int main()
     printf("Unordered:\n");
     linkedlist_loop(persons,linkedListPerson);printf("NULL");
     linkedlist_sort(&persons,linkedPersonSortcmp);
+    linkedlist_remove(&persons,0);
     printf("\nSorted by age:\n");
     linkedlist_loop(persons,linkedListPerson);printf("NULL\n\n");
 
-    /*
-    LinkedNodefloat* list = linkedlist_createNodefloat(10.42f);
-    linkedlist_insertfloat(&list,30.12f);
-    linkedlist_insertfloat(&list,42.632f);
 
-    printLinkedListfloat(list,"%f - ");
-
-    linkedlist_removefloat(&list,1);
-
-    printLinkedListfloat(list,"%f - ");
-    */
+    linkedlist_free(persons);
+    printf("malloc:%d | free:%d\n",nummalloc,numfree);
     return 0;
 }
 
-/*
-#define LINKED_LIST(T) typedef struct LinkedNode##T{T data;struct LinkedNode##T* next;}LinkedNode##T; \
-LinkedNode##T* linkedlist_createNode##T(T value) \
-{ \
-    LinkedNode##T *n = malloc(sizeof(LinkedNode##T)); \
-    n->data = value; \
-    n->next = NULL; \
-    return n; \
-} \
-void linkedlist_insert##T(LinkedNode##T** head,T value) \
-{ \
-    LinkedNode##T* n = linkedlist_createNode##T(value); \
-    n->next = *head; \
-    *head = n; \
-} \
-void linkedlist_remove##T(LinkedNode##T** head,int index) \
-{ \
-    LinkedNode##T* temp = *head; \
-    if(index == 0){*head = temp->next;return;} \
-    LinkedNode##T* prev = NULL; \
-    for(int i = 0; i < index;i++) \
-    { \
-        prev = temp; \
-        temp = temp->next; \
-    } \
-    prev->next = temp->next; \
-} \
-void printLinkedList##T(LinkedNode##T* head,char* format){ \
-    LinkedNode##T* n = head; \
-    int index = 0; \
-    do \
-    { \
-        printf(format,n->data); \
-        n = n->next; \
-        index++; \
-    } while (n != NULL);  \
-    printf("\n"); \
-} \
-
-LINKED_LIST(int)
-LINKED_LIST(float)
-
-typedef struct LinkedNode##T{T data;struct LinkedNode##T* next;}LinkedNode##T;
-*/

@@ -8,6 +8,7 @@ typedef struct stack{
     int maxsize;
 }stack;
 
+
 stack* _stack_create(int numElements,int sizeType)
 {
     stack* this_ = (stack*)malloc(sizeof(stack)); 

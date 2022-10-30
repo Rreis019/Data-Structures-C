@@ -64,5 +64,6 @@ int main()
         printf("%d ",queue_get(nums,int,i));
     }
 
+    queue_free(nums);
     return 0;
 }

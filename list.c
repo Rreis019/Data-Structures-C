@@ -1,6 +1,9 @@
 //List.h
 #include <stdio.h>
 #include <stdbool.h>
+
+
+
 typedef struct List
 {
     char* data;
@@ -28,6 +31,8 @@ int _list_search(List* this_,int sizeType,void* value,list_cmp func);
 //List.c
 #include <stdlib.h>
 #include <string.h>
+
+
 List* _list_create(int numElements,int sizeType){
     List *this_ = (List*)malloc(sizeof(List));
     this_->data = (char*)calloc(numElements,sizeType);
@@ -98,6 +103,9 @@ int _list_search(List* this_,int sizeType,void* value,list_cmp func)
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+
 //main.c
 typedef struct Person
 {
@@ -135,7 +143,7 @@ int main()
     int index = list_search(list,((Person){"Joao",15}),person_cmp);
     printf("%s found at %d\n","Joao",index);
 
-
+    list_free(list);
     ////////////////////////////////////////////////////////////////////////////////////////////////
 
     List* nums = list_create(5,int);
@@ -144,4 +152,6 @@ int main()
     for(int i = 0;i < nums->size;i++){
         printf("nums[%d] = %d\n",i,list_get(nums,int,i));
     }
+
+    list_free(nums);
 }
