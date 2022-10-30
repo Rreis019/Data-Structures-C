@@ -2,108 +2,10 @@
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
-/*
-typedef struct treenode{
-    int value;
-    struct treenode ** childs;
-    int childs_count;
-    int childs_maxsize;
-}treenode;
+#include <stdbool.h>
 
-//alloc free after
-treenode* treenode_createnode(int value)
-{
-    treenode* ret = malloc(sizeof(treenode));
-    if(ret != NULL){
-        ret->value = value;
-        ret->childs = malloc(sizeof(treenode) * 1); 
-        ret->childs_count = 0;
-        ret->childs_maxsize = 1;
-    }
-    return ret;
-}
-
-treenode* treenode_insertnode(treenode* root,int value)
-{
-    if(root->childs_count == root->childs_maxsize){
-        root->childs_maxsize *=2;
-        root->childs = realloc(root->childs,root->childs_maxsize);
-    }
-
-    treenode* child =  treenode_createnode(value);
-    root->childs[root->childs_count] = child;
-    root->childs_count++; 
-    return child;
-}
-
-
-void printspace(int num){
-    for (int i = 0; i < num; i++){
-        putchar(' ');
-    }
-}
-
-void treenode_print_(treenode* child,int level)
-{
-    for (int i = 0; i < child->childs_count; i++)
-    {
-        printspace(level*3);
-        printf("|- %d\n",child->childs[i]->value);
-        treenode_print_(child->childs[i],level+1);
-    }
-    
-}
-void treenode_print(treenode * root)
-{
-    int level = 0;
-    printf("|- %d\n",root->value);level++;
-    for (int i = 0; i < root->childs_count; i++)
-    {
-        printspace(level*3);
-        printf("|- %d\n",root->childs[i]->value);
-        treenode_print_(root->childs[i],level+1);
-    }
-    printf("\n");
-}
-
-void treenode_freechild(treenode* child)
-{
-    for (int i = 0; i < child->childs_count; i++)
-    {
-        treenode_freechild(child->childs[i]);
-        free(child->childs[i]);
-    }
-    free(child->childs);
-}
-
-void treenode_remove(treenode* parent,int childindex)
-{
-    treenode_freechild(parent->childs[childindex]);
-    for (int i = childindex; i < parent->childs_count-1; i++){
-        parent->childs[i] = parent->childs[i+1];
-    }
-    parent->childs_count--;
-}
-
-
-//if found value will return adress of the node else will return NULL
-treenode* treenode_search(treenode* root,int value)
-{
-    if(root == NULL){return NULL;}
-    if(root->value == value){return root;}
-
-    for (int i = 0; i < root->childs_count; i++){
-        
-        if(root->childs[i]->value == value){return root->childs[i];}
-        treenode* temp = treenode_search(root->childs[i],value);
-        if(temp != NULL){return temp;}
-    }
-
-    return NULL;
-}
-
-*/
-
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//tree.h
 
 typedef struct treenode{
     char* data;
@@ -112,6 +14,21 @@ typedef struct treenode{
     int childs_maxsize;
 }treenode;
 
+typedef void (*treenode_func)(treenode*);
+typedef bool (*treenode_cmp)(treenode*,void*);
+
+treenode* _treenode_createnode(void* value,int datasize);
+treenode* _treenode_insertnode(treenode* root,void* value,int datasize);
+void treenode_print(treenode * root,treenode_func printfunc);
+void treenode_remove(treenode* parent,int childindex);
+treenode* treenode_search(treenode* root,void* value,treenode_cmp func);
+
+#define ca(value) (typeof(value)){value} //cast as variable
+#define treenode_createnode(value) _treenode_createnode(&value,sizeof(typeof(value)))
+#define treenode_insertnode(root,value) _treenode_insertnode(root,&value,sizeof(typeof(value)))
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//tree.c
 treenode* _treenode_createnode(void* value,int datasize)
 {
     treenode* ret = malloc(sizeof(treenode));
@@ -205,10 +122,22 @@ void treenode_remove(treenode* parent,int childindex)
     parent->childs_count--;
 }
 
+treenode* treenode_search(treenode* root,void* value,treenode_cmp func)
+{
+    if(root == NULL){return NULL;}
+    if(func(root,value)){return root;}
+    for (int i = 0; i < root->childs_count; i++){
+        
+        if(func(root->childs[i],value)){return root->childs[i];}
+        treenode* temp = treenode_search(root->childs[i],value,func);
+        if(temp != NULL){return temp;}
+    }
+    return NULL;
+}
 
-#define ca(value) (typeof(value)){value} //cast as variable
-#define treenode_createnode(value) _treenode_createnode(&value,sizeof(typeof(value)))
-#define treenode_insertnode(root,value) _treenode_insertnode(root,&value,sizeof(typeof(value)))
+
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void printNumber(treenode* a){printf("%d",*(int*)a->data);}
 
@@ -222,6 +151,17 @@ void printEmployer(treenode* a)
     Employer* e = (Employer*)(a->data);
     printf("%s (%s)",e->name,e->role);
 }
+
+bool employercmp(treenode* root,void* value){
+    Employer* e = (Employer*)root->data;
+    return strcmp(e->name,(char*)value) == 0;
+}
+
+//quicksort
+
+
+
+
 int main()
 {
     treenode* root = treenode_createnode(ca(10));
@@ -236,7 +176,7 @@ int main()
     treenode_remove(root,2);
     treenode_print(root,printNumber);
     
-    printf("---------------------------\n");
+    puts("---------------------------");
 
     treenode* founder = treenode_createnode(((Employer){.name = "Maria", .role = "Founder"}));
     treenode*  director = treenode_insertnode(founder,((Employer){.name = "Joao", .role = "Sales Director"}));
@@ -254,5 +194,13 @@ int main()
 
     treenode_print(founder,printEmployer);
     
+    puts("---------------------------");
+    #define PERSON_NAME "Manuel"
+    if(treenode_search(founder,PERSON_NAME,employercmp) != NULL){
+        printf("%s found",PERSON_NAME);
+    }else{
+        printf("%s not found",PERSON_NAME);
+    }
+
     return EXIT_SUCCESS;
 }
