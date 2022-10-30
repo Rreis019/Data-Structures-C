@@ -22,7 +22,8 @@
         "deque": "c",
         "list": "c",
         "queue": "c",
-        "xhash": "c"
+        "xhash": "c",
+        "stdbool.h": "c"
     },
     "C_Cpp.errorSquiggles": "Disabled"
 }

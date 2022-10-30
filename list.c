@@ -1,10 +1,6 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <stdbool.h>
-#include <string.h>
-
-
 //List.h
+#include <stdio.h>
+#include <stdbool.h>
 typedef struct List
 {
     char* data;
@@ -30,7 +26,8 @@ int _list_search(List* this_,int sizeType,void* value,list_cmp func);
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //List.c
-
+#include <stdlib.h>
+#include <string.h>
 List* _list_create(int numElements,int sizeType){
     List *this_ = (List*)malloc(sizeof(List));
     this_->data = (char*)calloc(numElements,sizeType);
@@ -100,10 +97,8 @@ int _list_search(List* this_,int sizeType,void* value,list_cmp func)
     return -1;
 }
 
-
-
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
+//main.c
 typedef struct Person
 {
     char username[32];
