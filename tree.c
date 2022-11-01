@@ -1,50 +1,54 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
-#include <assert.h>
-#include <stdbool.h>
-
-
 int numfree = 0;
 int nummalloc = 0;
 #define free(ptr) numfree++; free(ptr);
 #define malloc(size)  malloc(size);nummalloc++;
 #define calloc(count,size) calloc(count,size);nummalloc++;
 
-
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //tree.h
+#pragma once
+#include <stdbool.h>
 
-typedef struct treenode{
-    struct treenode ** childs;
+typedef struct TreeNode{
+    struct TreeNode ** childs;
     int childs_count;
     int childs_maxsize;
     char* data;
-}treenode;
+}TreeNode;
 
-typedef void (*treenode_func)(treenode*);
-typedef bool (*treenode_cmp)(treenode*,void*);
+typedef void (*treenode_func)(TreeNode*);
+typedef bool (*treenode_cmp)(TreeNode*,void*);
 
-treenode* _treenode_createnode(void* value,int datasize);
-treenode* _treenode_insertnode(treenode* root,void* value,int datasize);
-void treenode_print(treenode * root,treenode_func printfunc);
-void treenode_remove(treenode** parent,int childindex);
-treenode* treenode_search(treenode* root,void* value,treenode_cmp func);
+TreeNode* _treenode_createnode(void* value,int datasize);
+TreeNode* _treenode_insertdata(TreeNode* root,void* value,int datasize);
+void treenode_insertnode(TreeNode* root,TreeNode* node);
+void treenode_print(TreeNode * root,treenode_func printfunc);
+void treenode_remove(TreeNode** parent,int childindex);
+TreeNode* treenode_search(TreeNode* root,void* value,treenode_cmp func);
+void treenode_free(TreeNode** root);
 
 #define ca(value) (typeof(value)){value} //cast as variable
 #define treenode_createnode(value) _treenode_createnode(&value,sizeof(typeof(value)))
-#define treenode_insertnode(root,value) _treenode_insertnode(root,&value,sizeof(typeof(value)))
+#define treenode_insertdata(root,value) _treenode_insertdata(root,&value,sizeof(typeof(value)))
+#define tree_data(node,type) (*(type*)(node->data))
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //tree.c
-treenode* _treenode_createnode(void* value,int datasize)
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <assert.h>
+
+TreeNode* _treenode_createnode(void* value,int datasize)
 {
-    treenode* ret = malloc(sizeof(treenode));
+    TreeNode* ret = (TreeNode*)malloc(sizeof(TreeNode));
     
     if(ret != NULL){
         //ret->value = value;
-        ret->childs = malloc(sizeof(treenode) * 1); 
-        ret->data = malloc(datasize);
+        ret->childs = (TreeNode**)malloc(sizeof(TreeNode) * 1); 
+        ret->data = (char*)malloc(datasize);
         memcpy(ret->data,value,datasize);
         ret->childs_count = 0;
         ret->childs_maxsize = 1;
@@ -60,24 +64,35 @@ void printspace(int num){
     }
 }
 
-treenode* _treenode_insertnode(treenode* root,void* value,int datasize)
+TreeNode* _treenode_insertdata(TreeNode* root,void* value,int datasize)
 {
     if(root->childs_count == root->childs_maxsize){
         root->childs_maxsize *=2;
-        root->childs = realloc(root->childs,root->childs_maxsize);
+        root->childs = (TreeNode**)realloc(root->childs,sizeof(TreeNode*) * root->childs_maxsize);
     }
 
-    treenode* child =  _treenode_createnode(value,datasize);
+    TreeNode* child =  _treenode_createnode(value,datasize);
     root->childs[root->childs_count] = child;
     root->childs_count++; 
     return child;
 }
 
-typedef void (*treenode_func)(treenode*);
+void treenode_insertnode(TreeNode* root,TreeNode* node){
+    if(root->childs_count == root->childs_maxsize){
+        root->childs_maxsize *=2;
+        root->childs = (TreeNode**)realloc(root->childs,sizeof(TreeNode*) *root->childs_maxsize);
+    }
 
-void treenode_freechild(treenode** child)
+    root->childs[root->childs_count] = node;
+    root->childs_count++; 
+}
+
+
+typedef void (*treenode_func)(TreeNode*);
+
+void treenode_freechild(TreeNode** child)
 {
-    treenode* tree = *child;
+    TreeNode* tree = *child;
     for (int i = 0; i < tree->childs_count; i++)
     {
         treenode_freechild(&tree->childs[i]);
@@ -88,8 +103,7 @@ void treenode_freechild(treenode** child)
     //printf("free %p %p %p\n",tree,tree->data,tree->childs);
 }
 
-
-void treenode_print_(treenode* child,int level,treenode_func printfunc)
+void treenode_print_(TreeNode* child,int level,treenode_func printfunc)
 {
     for (int i = 0; i < child->childs_count; i++)
     {
@@ -102,9 +116,7 @@ void treenode_print_(treenode* child,int level,treenode_func printfunc)
     
 }
 
-
-
-void treenode_print(treenode * root,treenode_func printfunc)
+void treenode_print(TreeNode * root,treenode_func printfunc)
 {
     if (root == NULL){puts("<empty>");return;}
     
@@ -122,12 +134,12 @@ void treenode_print(treenode * root,treenode_func printfunc)
     printf("\n");
 }
 
-void treenode_remove(treenode** parent,int childindex)
+void treenode_remove(TreeNode** parent,int childindex)
 {
-    treenode* temp = *parent;
+    TreeNode* temp = *parent;
     //if is outside of array throw error
     assert(childindex < temp->childs_count);
-    treenode* child = temp->childs[childindex];
+    TreeNode* child = temp->childs[childindex];
     for (int i = childindex; i < temp->childs_count-1; i++){
         temp->childs[i] = temp->childs[i+1];
     }
@@ -135,50 +147,46 @@ void treenode_remove(treenode** parent,int childindex)
     temp->childs_count--;
 }
 
-treenode* treenode_search(treenode* root,void* value,treenode_cmp func)
+TreeNode* treenode_search(TreeNode* root,void* value,treenode_cmp func)
 {
     if(root == NULL){return NULL;}
     if(func(root,value)){return root;}
     for (int i = 0; i < root->childs_count; i++){
         
         if(func(root->childs[i],value)){return root->childs[i];}
-        treenode* temp = treenode_search(root->childs[i],value,func);
+        TreeNode* temp = treenode_search(root->childs[i],value,func);
         if(temp != NULL){return temp;}
     }
     return NULL;
 }
 
-void treenode_free(treenode** root){
-
-    treenode* tree = *root;
+void treenode_free(TreeNode** root)
+{
+    TreeNode* tree = *root;
     while (tree->childs_count != 0){
         treenode_remove(root,0);
     }
     
-
     free(tree->childs);
     free(tree->data);
     free(tree);
-    root = NULL;
 }
-
-
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-void printNumber(treenode* a){printf("%d %p",*(int*)a->data,a);}
+void printNumber(TreeNode* a){printf("%d",*(int*)a->data);}
 
 typedef struct Employer{
     char name[64];
     char role[32];
 }Employer;
 
-void _printEmployer(treenode* a)
+void _printEmployer(TreeNode* a)
 {
     Employer* e = (Employer*)(a->data);
     printf("%s (%s) %p (e)%p",e->name,e->role,a,e);
 }
 
-bool employercmp(treenode* root,void* value){
+bool employercmp(TreeNode* root,void* value){
     Employer* e = (Employer*)root->data;
     return strcmp(e->name,(char*)value) == 0;
 }
@@ -186,34 +194,35 @@ bool employercmp(treenode* root,void* value){
 
 int main()
 {
-    treenode* root = treenode_createnode(ca(10));
-    treenode* child1 = treenode_insertnode(root,ca(52)); //will insert child node in root
-    treenode* child2 = treenode_insertnode(root,ca(20));
-    treenode* child3 = treenode_insertnode(root,ca(30));
+    TreeNode* root = treenode_createnode(ca(10));
 
-    treenode_insertnode(child1,ca(5));
-    treenode_insertnode(child1,ca(10));
-    treenode_insertnode(child2,ca(30));
+
+    treenode_insertdata(root,ca(5));
+    treenode_insertdata(root,ca(10));
+    treenode_insertdata(root,ca(30));
 
     treenode_print(root,printNumber);
-    treenode_remove(&root,2);
 
+    TreeNode* first = treenode_createnode(ca(50));
+    treenode_insertnode(first,root);
+    root = first;
+    puts("--------insert node--------");
+    treenode_print(root,printNumber);
     treenode_free(&root);
     puts("---------------------------");
+    TreeNode* founder = treenode_createnode(((Employer){.name = "Maria", .role = "Founder"}));
+    TreeNode*  director = treenode_insertdata(founder,((Employer){.name = "Joao", .role = "Sales Director"}));
+    TreeNode*  director2 = treenode_insertdata(founder,((Employer){.name = "Manuel", .role = "Advertising Director"}));
+    TreeNode*  director3 = treenode_insertdata(founder,((Employer){.name = "Rui", .role = "Communication Director"}));
 
-    treenode* founder = treenode_createnode(((Employer){.name = "Maria", .role = "Founder"}));
-    treenode*  director = treenode_insertnode(founder,((Employer){.name = "Joao", .role = "Sales Director"}));
-    treenode*  director2 = treenode_insertnode(founder,((Employer){.name = "Manuel", .role = "Advertising Director"}));
-    treenode*  director3 = treenode_insertnode(founder,((Employer){.name = "Rui", .role = "Communication Director"}));
-
-    treenode_insertnode(director,((Employer){.name = "Antonio", .role = "Employer"}));
-    treenode_insertnode(director2,((Employer){.name = "Rui", .role = "Employer"}));
-    treenode_insertnode(director2,((Employer){.name = "Miguel", .role = "Employer"}));
+    treenode_insertdata(director,((Employer){.name = "Antonio", .role = "Employer"}));
+    treenode_insertdata(director2,((Employer){.name = "Rui", .role = "Employer"}));
+    treenode_insertdata(director2,((Employer){.name = "Miguel", .role = "Employer"}));
 
 
-    treenode_insertnode(director3,((Employer){.name = "Nuno", .role = "Employer"}));
-    treenode_insertnode(director3,((Employer){.name = "Francisco", .role = "Employer"}));
-    treenode_insertnode(director3,((Employer){.name = "Vasco", .role = "Employer"}));
+    treenode_insertdata(director3,((Employer){.name = "Nuno", .role = "Employer"}));
+    treenode_insertdata(director3,((Employer){.name = "Francisco", .role = "Employer"}));
+    treenode_insertdata(director3,((Employer){.name = "Vasco", .role = "Employer"}));
 
     treenode_print(founder,_printEmployer);
     
@@ -227,7 +236,5 @@ int main()
 
     treenode_free(&founder);
     printf("malloc:%d | free:%d\n",nummalloc,numfree);
-
-    system("pause");
     return EXIT_SUCCESS;
 }
