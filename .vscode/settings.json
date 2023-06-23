@@ -23,7 +23,8 @@
         "list": "c",
         "queue": "c",
         "xhash": "c",
-        "stdbool.h": "c"
+        "stdbool.h": "c",
+        "assert.h": "c"
     },
     "C_Cpp.errorSquiggles": "Disabled"
 }

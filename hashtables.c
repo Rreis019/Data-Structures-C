@@ -1,73 +1,120 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdbool.h>
+#include <assert.h>
 
 
+#define KEY_SIZE 128
 typedef struct HashItem
 {
-    char* value;
-    char* key;
-    HashItem* next;
+    void* object; 
+    char key[KEY_SIZE]; 
+    struct HashItem* next;
 }HashItem;
+
+void hashitem_free(HashItem* item)
+{
+    free(item->object);
+    free(item);
+}
 
 typedef struct HashTable
 {
-    HashItem* data;
+    HashItem** data;
     int size;
     int maxsize;
 }HashTable;
 
-unsigned int hashtable_hash(HashTable* this_,char* key,int sizeType) {
+int hashtable_index(HashTable* this_,char* key) {
     int hash_value = 0x425;
-    for(int i = 0; i< sizeType;i++){
+    for(int i = 0; i< KEY_SIZE;i++){
         hash_value ^= key[i];
         hash_value += hash_value;
     }
-    return abs(hash_value) % this_->maxsize;
+    hash_value = abs(hash_value) % this_->maxsize;
+    return hash_value;
 }
-HashTable* _hashtable_create(int numElements,int sizeType)
+
+HashTable* hashtable_create(int numElements)
 {
     HashTable *this_ = (HashTable*)malloc(sizeof(HashTable));
     this_->maxsize = numElements < 11 ? numElements = 10 : numElements;
-    this_->data = (char*)calloc(this_->maxsize,sizeType);
+    this_->data = (void*)calloc(this_->maxsize,sizeof(HashItem));
     this_->size = 0;
     return this_;
 }
 
-void* _hash_put(HashTable* this_,char* value,char* key,int sizeValue,int sizeKey)
+void* hastable_search(HashTable* this_,char* key)
 {
-    int index = hashtable_hash(this_,key,sizeKey);
-    return (void*)(&this_->data[0])+ (sizeValue*index);
+    if(key == NULL){return NULL;}
+
+    //search for the key
+    HashItem* current = this_->data[hashtable_index(this_,key)];
+    while(current != NULL && strcmp(current->key,key) != 0){current = current->next;}
+    if(current == NULL){return NULL;}
+    return current->object;
 }
 
 
-bool _hash_search()
+bool hashtable_insert(HashTable* this_,void* object,char* key)
 {
+    if(object == NULL || key == NULL){return false;}
+
+    //if the key is already in the hashtable dont insert it
+    assert(hastable_search(this_,key) == NULL && "The key is already in the hashtable"); // false   
+
+
+    int index = hashtable_index(this_,key);
+
+    //create a new
+    HashItem* h = malloc(sizeof(HashItem));
+    h->object = object;
+    strcpy(h->key,key);
+
+    //insert entry to linked list
+    h->next = this_->data[index];
+    this_->data[index] = h;
     
+
+    this_->size++;
 }
 
-//key must be char*
-#define hashtable_create(numElements,type) _hashtable_create(numElements,sizeof(type))
-#define hashtable_put(h,v,k) memcpy( _hash_put(h,(char*)&v,(char*)&k,sizeof(typeof(v)),sizeof(typeof(k))) ,&v, sizeof(typeof(v)))
-#define hash_get(l,type,index) ((type*)l->data)[index]
-#define hash_search(h,key) hashtable_hash(h,(char*)&(typeof(key)){key},sizeof(typeof(key)))
+
+void hashtable_destroy(HashTable* this_)
+{
+    if(this_ == NULL){return;}
+    for(int i = 0; i < this_->maxsize; i++){
+        HashItem* current = this_->data[i];
+        while(current != NULL){
+            HashItem* next = current->next;
+            hashitem_free(current);
+            current = next;
+        }
+    }
+    free(this_->data);
+    free(this_);
+}
+
 
 
 int main()
 {
-    /* Not made yet
-    HashTable* map = hashtable_create(10,int);
-    hashtable_put(map,(int){40},(int){40});
+    HashTable* map = hashtable_create(2);
 
-    for(int i = 0; i < map->maxsize;i++)
-    {
-        printf("%d\n",hash_get(map,int,i));
-    }
+    int * n = malloc(sizeof(int));
+    *n = 10;
 
-    printf("Found 40 at: %d",hash_search(map,421));
+    hashtable_insert(map,n,"key");
+    hashtable_insert(map,n,"fwafwa");
+    hashtable_insert(map,n,"gwagwag");
 
+    printf("%p\n",hastable_search(map,"gwagwag"));
 
-    */
+    //printf("hash %d\n",hash_search(map,"monday"));
 
+    hashtable_destroy(map);
+
+    printf("destroyed\n");
     return 0;
 }
